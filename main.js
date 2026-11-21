@@ -1,7 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { Launcher, CrackAuth } = require('eml-lib');
 
 let mainWindow;
 
@@ -51,7 +50,6 @@ ipcMain.handle('get-mc-versions', async () => {
     if (!res.ok) throw new Error('Failed to fetch Mojang manifest');
     const data = await res.json();
 
-    // Minecraft 1.8 release date: 2014-09-02
     const minReleaseDate = new Date('2014-09-02T00:00:00Z').getTime();
 
     const versions = data.versions
@@ -67,7 +65,6 @@ ipcMain.handle('get-mc-versions', async () => {
 
     return { latestRelease: data.latest?.release, versions };
   } catch (err) {
-    // Offline fallback list
     return {
       latestRelease: '1.21.4',
       versions: [
@@ -140,6 +137,10 @@ ipcMain.handle('launch-game', async (_, config) => {
   const modsDir = path.join(instanceDir, 'mods');
 
   try {
+    const eml = await import('eml-lib');
+    const Launcher = eml.Launcher || eml.default?.Launcher;
+    const CrackAuth = eml.CrackAuth || eml.default?.CrackAuth;
+
     if (proSettings) applyProFpsConfig(instanceDir);
 
     if (fpsBoost && loader === 'fabric') {
