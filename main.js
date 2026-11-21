@@ -131,7 +131,7 @@ async function installModrinthProject(projectSlug, version, loader, modsDir) {
   )}&loaders=${encodeURIComponent(JSON.stringify([loader]))}`;
 
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'MasterClient/2.2.0 (FeatherEdition)' }
+    headers: { 'User-Agent': 'MasterClient/2.3.0 (FeatherEdition)' }
   });
   if (!res.ok) return null;
 
@@ -185,7 +185,7 @@ ipcMain.handle('launch-game', async (_, config) => {
     let mcConfig = { version };
 
     if (loader !== 'vanilla') {
-      mainWindow.webContents.send('launch-status', {
+      mainWindow?.webContents.send('launch-status', {
         text: `Finding latest ${loader} version for Minecraft ${version}...`,
         progress: 4
       });
@@ -213,7 +213,7 @@ ipcMain.handle('launch-game', async (_, config) => {
       ];
       for (let i = 0; i < ultraFpsMods.length; i++) {
         const slug = ultraFpsMods[i];
-        mainWindow.webContents.send('launch-status', {
+        mainWindow?.webContents.send('launch-status', {
           text: `Ultra FPS Engine (${i + 1}/${ultraFpsMods.length}): ${slug}...`,
           progress: 6 + Math.round(((i + 1) / ultraFpsMods.length) * 20)
         });
@@ -222,15 +222,15 @@ ipcMain.handle('launch-game', async (_, config) => {
     }
 
     if (voiceChat && loader === 'fabric') {
-      mainWindow.webContents.send('launch-status', {
+      mainWindow?.webContents.send('launch-status', {
         text: 'Checking Built-In Proximity Voice Chat...',
         progress: 28
       });
       await installModrinthProject('simple-voice-chat', version, loader, modsDir);
     }
 
-    mainWindow.webContents.send('launch-status', {
-      text: `Downloading & launching Minecraft ${version} (${loader})...`,
+    mainWindow?.webContents.send('launch-status', {
+      text: `Downloading Java & Minecraft ${version} (${loader})...`,
       progress: 32
     });
 
@@ -247,30 +247,43 @@ ipcMain.handle('launch-game', async (_, config) => {
     });
 
     launcher.on('launch_download', (d) => {
-      const pct = d?.total?.size
-        ? Math.min(92, 32 + Math.round((d.current.size / d.total.size) * 60))
-        : 60;
-      mainWindow.webContents.send('launch-status', {
-        text: `Downloading game files (${d?.current?.amount || 0}/${d?.total?.amount || '?'})...`,
-        progress: pct
+      try {
+        const curSize = d?.current?.size ?? d?.downloaded?.size ?? 0;
+        const totSize = d?.total?.size ?? 0;
+        const curAmt = d?.current?.amount ?? d?.downloaded?.amount ?? 0;
+        const totAmt = d?.total?.amount ?? '?';
+        const pct = totSize > 0
+          ? Math.min(92, 32 + Math.round((curSize / totSize) * 60))
+          : 60;
+        mainWindow?.webContents.send('launch-status', {
+          text: `Downloading game files (${curAmt}/${totAmt})...`,
+          progress: pct
+        });
+      } catch (_) {}
+    });
+
+    launcher.on('launch_extract', () => {
+      mainWindow?.webContents.send('launch-status', {
+        text: 'Extracting Java & libraries...',
+        progress: 94
       });
     });
 
     launcher.on('launch_launch', () => {
-      mainWindow.webContents.send('launch-status', {
+      mainWindow?.webContents.send('launch-status', {
         text: `Master Client ${version} Running!`,
         progress: 100
       });
     });
 
     launcher.on('launch_close', () => {
-      mainWindow.webContents.send('launch-closed');
+      mainWindow?.webContents.send('launch-closed');
     });
 
     await launcher.launch();
     return { ok: true };
   } catch (err) {
-    return { ok: false, error: err.message };
+    return { ok: false, error: err?.message || String(err) };
   }
 });
 
