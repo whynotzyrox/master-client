@@ -83,6 +83,47 @@ ipcMain.handle('get-mc-versions', async () => {
   }
 });
 
+// Auto-fetch compatible Mod Loader version (Fabric, Forge, NeoForge, Quilt)
+async function resolveLoaderVersion(mcVersion, loader) {
+  if (loader === 'fabric') {
+    const res = await fetch(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(mcVersion)}`);
+    if (!res.ok) return null;
+    const list = await res.json();
+    if (!Array.isArray(list) || !list.length) return null;
+    const stable = list.find((item) => item.loader?.stable);
+    return (stable || list[0]).loader?.version || null;
+  }
+
+  if (loader === 'quilt') {
+    const res = await fetch(`https://meta.quiltmc.org/v3/versions/loader/${encodeURIComponent(mcVersion)}`);
+    if (!res.ok) return null;
+    const list = await res.json();
+    if (!Array.isArray(list) || !list.length) return null;
+    return list[0].loader?.version || null;
+  }
+
+  if (loader === 'forge') {
+    const res = await fetch('https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.promos?.[`${mcVersion}-recommended`] || data.promos?.[`${mcVersion}-latest`] || null;
+  }
+
+  if (loader === 'neoforge') {
+    const res = await fetch('https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge');
+    if (!res.ok) return null;
+    const data = await res.json();
+    const parts = mcVersion.split('.');
+    const prefix = parts[0] === '1'
+      ? `${parts[1]}.${parts[2] || '0'}.`
+      : `${parts[0]}.${parts[1] || '0'}.`;
+    const matches = (data.versions || []).filter((v) => v.startsWith(prefix));
+    return matches.length ? matches[matches.length - 1] : null;
+  }
+
+  return null;
+}
+
 // Download compatible Modrinth project .jar
 async function installModrinthProject(projectSlug, version, loader, modsDir) {
   const url = `https://api.modrinth.com/v2/project/${projectSlug}/version?game_versions=${encodeURIComponent(
@@ -90,7 +131,7 @@ async function installModrinthProject(projectSlug, version, loader, modsDir) {
   )}&loaders=${encodeURIComponent(JSON.stringify([loader]))}`;
 
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'MasterClient/2.1.0 (FeatherEdition)' }
+    headers: { 'User-Agent': 'MasterClient/2.2.0 (FeatherEdition)' }
   });
   if (!res.ok) return null;
 
@@ -141,6 +182,21 @@ ipcMain.handle('launch-game', async (_, config) => {
     const Launcher = eml.Launcher || eml.default?.Launcher;
     const CrackAuth = eml.CrackAuth || eml.default?.CrackAuth;
 
+    let mcConfig = { version };
+
+    if (loader !== 'vanilla') {
+      mainWindow.webContents.send('launch-status', {
+        text: `Finding latest ${loader} version for Minecraft ${version}...`,
+        progress: 4
+      });
+
+      const loaderVersion = await resolveLoaderVersion(version, loader);
+      if (!loaderVersion) {
+        throw new Error(`${loader.toUpperCase()} does not support Minecraft ${version} yet. Try Vanilla or another version.`);
+      }
+      mcConfig = { version, loader, loaderVersion };
+    }
+
     if (proSettings) applyProFpsConfig(instanceDir);
 
     if (fpsBoost && loader === 'fabric') {
@@ -159,7 +215,7 @@ ipcMain.handle('launch-game', async (_, config) => {
         const slug = ultraFpsMods[i];
         mainWindow.webContents.send('launch-status', {
           text: `Ultra FPS Engine (${i + 1}/${ultraFpsMods.length}): ${slug}...`,
-          progress: 5 + Math.round(((i + 1) / ultraFpsMods.length) * 20)
+          progress: 6 + Math.round(((i + 1) / ultraFpsMods.length) * 20)
         });
         await installModrinthProject(slug, version, loader, modsDir);
       }
@@ -174,12 +230,11 @@ ipcMain.handle('launch-game', async (_, config) => {
     }
 
     mainWindow.webContents.send('launch-status', {
-      text: `Preparing Minecraft ${version} (${loader})...`,
+      text: `Downloading & launching Minecraft ${version} (${loader})...`,
       progress: 32
     });
 
     const account = new CrackAuth().auth(username || 'MasterPlayer');
-    const mcConfig = loader === 'vanilla' ? { version } : { version, loader };
 
     const launcher = new Launcher({
       root: instanceDir,
