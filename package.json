@@ -1,11 +1,11 @@
 {
   "name": "master-client",
   "version": "1.0.0",
-  "description": "Master Client - Best Minecraft Launcher",
+  "description": "Master Client - High-FPS Custom Minecraft Launcher",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win --publish never"
   },
   "dependencies": {
     "eml-lib": "^2.7.1"
