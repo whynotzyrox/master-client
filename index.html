@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Master Client</title>
+  <style>
+    :root {
+      --bg: #08080c;
+      --panel: rgba(19, 19, 27, 0.82);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #ff2a4b;
+      --accent-glow: rgba(255, 42, 75, 0.45);
+      --text: #f5f5fa;
+      --muted: #8b8d9e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
+    body {
+      background: radial-gradient(circle at 85% 10%, rgba(255, 42, 75, 0.18), transparent 45%),
+                  radial-gradient(circle at 15% 90%, rgba(120, 20, 45, 0.14), transparent 40%), var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .titlebar {
+      height: 40px; display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; background: rgba(9, 9, 14, 0.94); border-bottom: 1px solid var(--border);
+      -webkit-app-region: drag;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: 1.5px; font-size: 13px; }
+    .badge { background: var(--accent); padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 800; }
+    .win-controls { display: flex; gap: 6px; -webkit-app-region: no-drag; }
+    .win-btn {
+      width: 30px; height: 24px; border: none; border-radius: 6px;
+      background: transparent; color: var(--muted); cursor: pointer; font-weight: bold;
+    }
+    .win-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .win-btn.close:hover { background: var(--accent); }
+
+    .app-body { flex: 1; display: flex; overflow: hidden; }
+    .sidebar {
+      width: 225px; background: rgba(12, 12, 18, 0.9); border-right: 1px solid var(--border);
+      padding: 18px 12px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .nav-btn {
+      padding: 11px 14px; border-radius: 10px; border: 1px solid transparent;
+      background: transparent; color: var(--muted); text-align: left;
+      font-weight: 600; font-size: 13.5px; cursor: pointer; transition: 0.2s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.04); color: #fff; }
+    .nav-btn.active {
+      background: linear-gradient(90deg, rgba(255,42,75,0.22), transparent);
+      border-color: rgba(255,42,75,0.4); color: #fff;
+    }
+    .account-box {
+      margin-top: auto; padding: 12px; border-radius: 12px;
+      background: var(--panel); border: 1px solid var(--border);
+    }
+    .account-box label { display: block; font-size: 10.5px; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.8px; }
+    .account-box input {
+      width: 100%; padding: 8px 10px; border-radius: 7px; border: 1px solid var(--border);
+      background: #0c0c12; color: #fff; font-weight: 700; outline: none;
+    }
+    .account-box input:focus { border-color: var(--accent); }
+
+    .content { flex: 1; padding: 24px 28px; overflow-y: auto; display: flex; flex-direction: column; }
+    .page { display: none; flex: 1; flex-direction: column; gap: 18px; }
+    .page.active { display: flex; }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(255,42,75,0.16), rgba(16,16,24,0.92));
+      border: 1px solid rgba(255,42,75,0.25); border-radius: 18px; padding: 24px 28px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .hero h1 { font-size: 30px; margin-bottom: 6px; }
+    .hero p { color: var(--muted); font-size: 13.5px; max-width: 560px; line-height: 1.45; }
+    .pill {
+      display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 10.5px;
+      font-weight: 800; background: rgba(255,42,75,0.22); color: #ff6e84; margin-bottom: 8px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px; transition: 0.2s;
+    }
+    .card:hover { border-color: rgba(255,255,255,0.16); }
+    .card h3 { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 8px; }
+    select, input[type="text"] {
+      width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--border);
+      background: #0c0c12; color: #fff; font-size: 13.5px; outline: none;
+    }
+    select:focus, input[type="text"]:focus { border-color: var(--accent); }
+
+    .launch-bar {
+      margin-top: auto; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 16px; padding: 16px 22px; display: flex; align-items: center; gap: 18px;
+    }
+    .progress-wrap { flex: 1; }
+    .status-text { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+    .progress-track { height: 8px; background: #13131c; border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ff2a4b, #ff7043); transition: width 0.25s; }
+    .play-btn {
+      padding: 15px 40px; border: none; border-radius: 12px; font-size: 15px; font-weight: 800;
+      letter-spacing: 1.5px; color: #fff; cursor: pointer;
+      background: linear-gradient(135deg, #ff2a4b, #d41434);
+      box-shadow: 0 0 26px var(--accent-glow); transition: 0.2s;
+    }
+    .play-btn:hover { transform: translateY(-2px); box-shadow: 0 0 36px var(--accent-glow); }
+    .play-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .toolbar { display: flex; gap: 10px; }
+    .btn-sec {
+      padding: 9px 14px; border-radius: 9px; border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap;
+    }
+    .btn-sec:hover { border-color: var(--accent); background: rgba(255,42,75,0.14); }
+    .mod-list { display: flex; flex-direction: column; gap: 9px; overflow-y: auto; max-height: 250px; }
+    .mod-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 15px; border-radius: 11px; background: var(--panel); border: 1px solid var(--border);
+    }
+    .mod-meta { display: flex; flex-direction: column; gap: 2px; }
+    .mod-meta small { color: var(--muted); font-size: 11.5px; }
+
+    .switch { position: relative; width: 42px; height: 22px; display: inline-block; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; background: #252534; border-radius: 99px; cursor: pointer; transition: 0.2s;
+    }
+    .slider:before {
+      content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%; transition: 0.2s;
+    }
+    input:checked + .slider { background: var(--accent); }
+    input:checked + .slider:before { transform: translateX(20px); }
+    .wardrobe-preview {
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      gap: 12px; padding: 24px; background: #0c0c12; border-radius: 14px; border: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="titlebar">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M3 18L5 6L12 12L19 6L21 18H3Z" fill="#ff2a4b"/>
+      </svg>
+      <span>MASTER CLIENT</span>
+      <span class="badge">FEATHER EDITION</span>
+    </div>
+    <div class="win-controls">
+      <button class="win-btn" id="min-btn">—</button>
+      <button class="win-btn" id="max-btn">□</button>
+      <button class="win-btn close" id="close-btn">✕</button>
+    </div>
+  </div>
+
+  <div class="app-body">
+    <aside class="sidebar">
+      <button class="nav-btn active" data-tab="home">Home & Launch</button>
+      <button class="nav-btn" data-tab="mods">Feather Mods & Hub</button>
+      <button class="nav-btn" data-tab="packs">Packs & Shaders</button>
+      <button class="nav-btn" data-tab="wardrobe">Skin & Cape Wardrobe</button>
+      <button class="nav-btn" data-tab="settings">3x FPS & Voice Chat</button>
+
+      <div class="account-box">
+        <label>OFFLINE PLAYER NAME</label>
+        <input type="text" id="username" placeholder="Username..." maxlength="16" />
+      </div>
+    </aside>
+
+    <main class="content">
+      <!-- 1. HOME TAB -->
+      <section class="page active" id="tab-home">
+        <div class="hero">
+          <div>
+            <span class="pill">ALL VERSIONS (1.8 – LATEST) • 9-MOD ULTRA FPS</span>
+            <h1>Master Client</h1>
+            <p>Play every Minecraft release from <strong>1.8</strong> to the <strong>latest version</strong> with isolated mod profiles, automatic 3x FPS optimization, and custom packs & capes.</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <h3 style="margin:0;">Minecraft Version (1.8 – Latest)</h3>
+              <label style="font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="checkbox" id="show-snapshots" style="accent-color:var(--accent);" /> Snapshots
+              </label>
+            </div>
+            <input type="text" id="version-filter" placeholder="Filter version (e.g. 1.8.9, 1.20.4, 1.21)..." style="padding:7px 10px; font-size:12.5px;" />
+            <select id="mc-version">
+              <option value="1.21.4">Loading official versions (1.8 – Latest)...</option>
+            </select>
+          </div>
+
+          <div class="card" style="display:flex; flex-direction:column; gap:8px;">
+            <h3 style="margin:0;">Mod Loader</h3>
+            <p style="font-size:12px; color:var(--muted);">Choose Fabric for the automatic 9-mod 3x FPS pack, or Forge / NeoForge / Quilt for custom mods.</p>
+            <select id="mc-loader" style="margin-top:auto;">
+              <option value="fabric" selected>Fabric (Ultra FPS + Feather Mods)</option>
+              <option value="neoforge">NeoForge</option>
+              <option value="forge">Forge</option>
+              <option value="quilt">Quilt</option>
+              <option value="vanilla">Vanilla (Pure Minecraft)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="launch-bar">
+          <div class="progress-wrap">
+            <div class="status-text" id="status-text">Ready to launch Master Client</div>
+            <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          </div>
+          <button class="play-btn" id="play-btn">LAUNCH</button>
+        </div>
+      </section>
+
+      <!-- 2. FEATHER MODS & MODRINTH HUB -->
+      <section class="page" id="tab-mods">
+        <h3 style="font-size:12px; color:var(--muted); text-transform:uppercase;">1-Click Feather Essentials (Auto-Matches Selected Version)</h3>
+        <div class="grid-3" id="preset-mods"></div>
+
+        <div class="toolbar">
+          <input type="text" id="mod-search" placeholder="Search 50,000+ Modrinth mods..." />
+          <button class="btn-sec" id="search-btn">Search</button>
+          <button class="btn-sec" id="import-mod-btn">+ Add Own .JAR</button>
+          <button class="btn-sec" id="open-mods-btn">Mods Folder</button>
+        </div>
+
+        <div id="search-results" class="mod-list" style="display:none;"></div>
+        <h3 style="font-size:12px; color:var(--muted); text-transform:uppercase;">Installed Profile Mods (Toggle ON/OFF)</h3>
+        <div id="installed-mods" class="mod-list"></div>
+      </section>
+
+      <!-- 3. RESOURCE PACKS & SHADERS -->
+      <section class="page" id="tab-packs">
+        <div class="grid-2">
+          <div class="card" style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <h3>Resource Packs (.ZIP)</h3>
+              <button class="btn-sec" id="import-rp-btn">+ Add Pack</button>
+            </div>
+            <div id="rp-list" class="mod-list"></div>
+          </div>
+
+          <div class="card" style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <h3>Shader Packs (.ZIP)</h3>
+              <button class="btn-sec" id="import-sh-btn">+ Add Shader</button>
+            </div>
+            <div id="sh-list" class="mod-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. SKIN & CAPE WARDROBE -->
+      <section class="page" id="tab-wardrobe">
+        <div class="grid-2">
+          <div class="wardrobe-preview">
+            <canvas id="skin-canvas" width="160" height="220"></canvas>
+            <small style="color:var(--muted);">Live Skin Preview</small>
+          </div>
+          <div class="card" style="display:flex; flex-direction:column; gap:14px;">
+            <h3>Custom Skin & Cosmetics</h3>
+            <p style="font-size:13px; color:var(--muted);">Upload any 64x64 Minecraft `.png` skin to preview it, or install the Capes module to wear custom capes in-game.</p>
+            <input type="file" id="skin-upload" accept="image/png" style="color:var(--muted); font-size:13px;" />
+            <button class="btn-sec" onclick="installPreset('capes', this)">Enable In-Game Capes Mod</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. 3X FPS & VOICE CHAT SETTINGS -->
+      <section class="page" id="tab-settings">
+        <div class="card">
+          <h3>Allocated RAM: <span id="ram-label" style="color:#fff;">4 GB</span></h3>
+          <input type="range" id="ram-slider" min="2" max="16" value="4" style="width:100%; accent-color:var(--accent);" />
+        </div>
+
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 style="color:#fff; margin-bottom:4px;">9-Mod Ultra FPS Engine (Sodium + Lithium + ImmediatelyFast)</h3>
+            <p style="font-size:12.5px; color:var(--muted);">Doubles/Triples FPS and slashes memory usage automatically on launch.</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="fps-boost" checked /><span class="slider"></span></label>
+        </div>
+
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 style="color:#fff; margin-bottom:4px;">Pro Video Settings Auto-Tuner</h3>
+            <p style="font-size:12.5px; color:var(--muted);">Sets 260 Max FPS, disables VSync & heavy particles, and optimizes entity shadows.</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="pro-settings" checked /><span class="slider"></span></label>
+        </div>
+
+        <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 style="color:#fff; margin-bottom:4px;">Built-In Proximity Voice Chat (Press V in-game)</h3>
+            <p style="font-size:12.5px; color:var(--muted);">Installs Simple Voice Chat with noise suppression and group voice calls.</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="voice-chat" checked /><span class="slider"></span></label>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
